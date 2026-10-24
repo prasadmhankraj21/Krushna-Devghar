@@ -1,6 +1,7 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Auth Protection Component
 import ProtectedRoute from './components/ProtectedRoute';
@@ -32,65 +33,69 @@ import AdminCustomers from './pages/admin/AdminCustomers';
 export default function App() {
   return (
     <HashRouter>
-      <AuthProvider>
-        <CartProvider>
-          <div className="min-h-screen flex flex-col bg-[#fbfbf9] text-stone-900 font-sans">
-            <Routes>
-              {/* 1. Customer Authentication Pages */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+      <ErrorBoundary>
+        <AuthProvider>
+          <CartProvider>
+            <div className="min-h-screen flex flex-col bg-[#fbfbf9] text-stone-900 font-sans">
+              <Routes>
+                {/* 1. Customer Authentication Pages */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
 
-              {/* 2. Dedicated Owner Admin Authentication */}
-              <Route path="/admin/login" element={<AdminLogin />} />
+                {/* 2. Dedicated Owner Admin Authentication */}
+                <Route path="/admin/login" element={<AdminLogin />} />
 
-              {/* 3. Dedicated Owner Admin Portal (Completely isolated from customer layout) */}
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <AdminLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<Navigate to="/admin/dashboard" replace />} />
-                <Route path="dashboard" element={<AdminDashboard />} />
-                <Route path="products" element={<AdminProducts />} />
-                <Route path="orders" element={<AdminOrders />} />
-                <Route path="customers" element={<AdminCustomers />} />
-              </Route>
+                {/* 3. Dedicated Owner Admin Portal (Completely isolated from customer layout) */}
+                <Route
+                  path="/admin"
+                  element={
+                    <ProtectedRoute adminOnly={true}>
+                      <AdminLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<Navigate to="/admin/dashboard" replace />} />
+                  <Route path="dashboard" element={<AdminDashboard />} />
+                  <Route path="products" element={<AdminProducts />} />
+                  <Route path="orders" element={<AdminOrders />} />
+                  <Route path="customers" element={<AdminCustomers />} />
+                </Route>
 
-              {/* 4. Customer Storefront (Requires Customer Login to browse & purchase) */}
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <div className="flex-1 flex flex-col min-h-screen">
-                      <Navbar />
-                      <div className="flex-1">
-                        <Routes>
-                          <Route path="/" element={<Home />} />
-                          <Route path="/shop" element={<Shop />} />
-                          <Route path="/product/:id" element={<ProductDetail />} />
-                          <Route path="/cart" element={<Cart />} />
-                          <Route path="/checkout" element={<Checkout />} />
-                          <Route path="/order-success/:orderNumber" element={<OrderSuccess />} />
-                          <Route path="/your-orders" element={<MyOrders />} />
-                          <Route path="/my-orders" element={<MyOrders />} />
-                          <Route path="/track" element={<TrackOrder />} />
+                {/* 4. Customer Storefront (Requires Customer Login to browse & purchase) */}
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <div className="flex-1 flex flex-col min-h-screen">
+                        <Navbar />
+                        <div className="flex-1">
+                          <ErrorBoundary>
+                            <Routes>
+                              <Route path="/" element={<Home />} />
+                              <Route path="/shop" element={<Shop />} />
+                              <Route path="/product/:id" element={<ProductDetail />} />
+                              <Route path="/cart" element={<Cart />} />
+                              <Route path="/checkout" element={<Checkout />} />
+                              <Route path="/order-success/:orderNumber" element={<OrderSuccess />} />
+                              <Route path="/your-orders" element={<MyOrders />} />
+                              <Route path="/my-orders" element={<MyOrders />} />
+                              <Route path="/track" element={<TrackOrder />} />
 
-                          {/* Fallback */}
-                          <Route path="*" element={<Navigate to="/" replace />} />
-                        </Routes>
+                              {/* Fallback */}
+                              <Route path="*" element={<Navigate to="/" replace />} />
+                            </Routes>
+                          </ErrorBoundary>
+                        </div>
+                        <Footer />
                       </div>
-                      <Footer />
-                    </div>
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </div>
-        </CartProvider>
-      </AuthProvider>
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </div>
+          </CartProvider>
+        </AuthProvider>
+      </ErrorBoundary>
     </HashRouter>
   );
 }

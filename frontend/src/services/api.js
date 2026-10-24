@@ -16,6 +16,29 @@ export function resolveImageUrl(url) {
   return url;
 }
 
+// Safely parse JSON strings or arrays and resolve each image URL
+export function parseAndResolveImages(imagesField, defaultImageUrl = '') {
+  let list = [];
+  if (Array.isArray(imagesField)) {
+    list = imagesField;
+  } else if (typeof imagesField === 'string' && imagesField.trim()) {
+    try {
+      const parsed = JSON.parse(imagesField);
+      if (Array.isArray(parsed)) {
+        list = parsed;
+      } else if (typeof parsed === 'string' && parsed.trim()) {
+        list = [parsed];
+      }
+    } catch (e) {
+      list = [imagesField.trim()];
+    }
+  }
+  if (list.length === 0 && defaultImageUrl) {
+    list = [defaultImageUrl];
+  }
+  return list.filter(Boolean).map(url => resolveImageUrl(url));
+}
+
 function getAuthHeaders(isFormData = false) {
   const token = localStorage.getItem('royal_marble_token');
   const headers = {};
@@ -31,20 +54,24 @@ function getAuthHeaders(isFormData = false) {
 // Client-side Database Helpers for Offline / GitHub Pages
 function getLocalProducts() {
   const cached = localStorage.getItem('kd_products');
+  let products = [];
   if (cached) {
     try {
-      return JSON.parse(cached);
+      products = JSON.parse(cached);
     } catch (e) {
       // Fallback
     }
   }
-  // Initialize with default 21 products uploaded by the owner
-  const initial = defaultProducts.map(p => ({
+  if (!products || !Array.isArray(products) || products.length === 0) {
+    products = defaultProducts;
+    localStorage.setItem('kd_products', JSON.stringify(products));
+  }
+  // Ensure every product always has resolved image_url and a real array for images
+  return products.map(p => ({
     ...p,
-    image_url: resolveImageUrl(p.image_url)
+    image_url: resolveImageUrl(p.image_url),
+    images: parseAndResolveImages(p.images, p.image_url)
   }));
-  localStorage.setItem('kd_products', JSON.stringify(initial));
-  return initial;
 }
 
 function saveLocalProducts(products) {
@@ -318,10 +345,11 @@ export const api = {
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.products) {
-          // Resolve relative images
+          // Resolve relative images and parse images array
           const resolved = data.products.map(p => ({
             ...p,
-            image_url: resolveImageUrl(p.image_url)
+            image_url: resolveImageUrl(p.image_url),
+            images: parseAndResolveImages(p.images, p.image_url)
           }));
           return { success: true, products: resolved };
         }
@@ -361,12 +389,22 @@ export const api = {
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.product) {
+          const product = {
+            ...data.product,
+            image_url: resolveImageUrl(data.product.image_url),
+            images: parseAndResolveImages(data.product.images, data.product.image_url)
+          };
+          const related = Array.isArray(data.related)
+            ? data.related.map(r => ({
+                ...r,
+                image_url: resolveImageUrl(r.image_url),
+                images: parseAndResolveImages(r.images, r.image_url)
+              }))
+            : [];
           return {
             success: true,
-            product: {
-              ...data.product,
-              image_url: resolveImageUrl(data.product.image_url)
-            }
+            product,
+            related
           };
         }
       }
@@ -375,7 +413,11 @@ export const api = {
     const products = getLocalProducts();
     const product = products.find(p => String(p.id) === String(id));
     if (product) {
-      return { success: true, product };
+      const related = products
+        .filter(p => p.category === product.category && String(p.id) !== String(id))
+        .slice(0, 4);
+
+      return { success: true, product, related };
     }
     return { success: false, message: 'Product not found' };
   },

@@ -32,19 +32,55 @@ export default function ProductDetail() {
       setLoading(true);
       try {
         const res = await api.getProductById(id);
-        if (res.success) {
+        if (res.success && res.product) {
           setProduct(res.product);
-          setSelectedImage(res.product.image_url || res.product.images?.[0] || '');
+          let initial = res.product.image_url || '';
+          if (!initial && res.product.images) {
+            if (Array.isArray(res.product.images) && res.product.images.length > 0) {
+              initial = res.product.images[0];
+            } else if (typeof res.product.images === 'string') {
+              try {
+                const parsed = JSON.parse(res.product.images);
+                if (Array.isArray(parsed) && parsed.length > 0) initial = parsed[0];
+              } catch (e) {
+                initial = res.product.images;
+              }
+            }
+          }
+          setSelectedImage(initial);
           setRelated(res.related || []);
+        } else {
+          setProduct(null);
         }
       } catch (err) {
         console.error('Error loading product:', err);
+        setProduct(null);
       } finally {
         setLoading(false);
       }
     }
     loadProduct();
   }, [id]);
+
+  // Extract images array safely (handles stringified JSON, array, or single string)
+  const imagesList = React.useMemo(() => {
+    if (!product) return [];
+    if (Array.isArray(product.images)) {
+      return product.images.filter(Boolean);
+    }
+    if (typeof product.images === 'string') {
+      try {
+        const parsed = JSON.parse(product.images);
+        if (Array.isArray(parsed)) return parsed.filter(Boolean);
+      } catch (e) {
+        if (product.images.trim()) return [product.images.trim()];
+      }
+    }
+    if (product.image_url) {
+      return [product.image_url];
+    }
+    return [];
+  }, [product]);
 
   if (loading) {
     return (
@@ -83,8 +119,8 @@ export default function ProductDetail() {
     navigate('/checkout');
   };
 
-  const discountPercent = product.original_price && product.original_price > product.price
-    ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
+  const discountPercent = product.original_price && Number(product.original_price) > Number(product.price)
+    ? Math.round(((Number(product.original_price) - Number(product.price)) / Number(product.original_price)) * 100)
     : null;
 
   return (
@@ -95,11 +131,11 @@ export default function ProductDetail() {
         <span>/</span>
         <Link to="/shop" className="hover:text-stone-900">Products</Link>
         <span>/</span>
-        <Link to={`/shop?category=${encodeURIComponent(product.category)}`} className="hover:text-stone-900">
-          {product.category}
+        <Link to={`/shop?category=${encodeURIComponent(product.category || '')}`} className="hover:text-stone-900">
+          {product.category || 'Stone Collection'}
         </Link>
         <span>/</span>
-        <span className="text-stone-900 font-semibold truncate max-w-xs">{product.title}</span>
+        <span className="text-stone-900 font-semibold truncate max-w-xs">{product.title || 'Product Details'}</span>
       </nav>
 
       {/* Main Product Showcase */}
@@ -111,13 +147,17 @@ export default function ProductDetail() {
               src={selectedImage || product.image_url}
               alt={product.title}
               className="w-full h-full object-contain object-center transition-all duration-300 drop-shadow-sm"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80';
+              }}
             />
           </div>
 
           {/* Thumbnails */}
-          {product.images && product.images.length > 1 && (
+          {imagesList.length > 1 && (
             <div className="flex items-center gap-3 overflow-x-auto pb-2">
-              {product.images.map((img, idx) => (
+              {imagesList.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedImage(img)}
@@ -125,7 +165,14 @@ export default function ProductDetail() {
                     selectedImage === img ? 'border-amber-600 scale-105 shadow' : 'border-stone-200 opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <img src={img} alt={`View ${idx + 1}`} className="w-full h-full object-cover" />
+                  <img
+                    src={img}
+                    alt={`View ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
                 </button>
               ))}
             </div>
@@ -137,10 +184,10 @@ export default function ProductDetail() {
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xs uppercase font-bold tracking-wider text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
-                {product.category}
+                {product.category || 'Stone Collection'}
               </span>
               <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
-                <CheckCircle className="w-3 h-3" /> In Stock ({product.stock} units ready)
+                <CheckCircle className="w-3 h-3" /> In Stock ({product.stock ?? 1} units ready)
               </span>
             </div>
 
@@ -150,7 +197,7 @@ export default function ProductDetail() {
 
             <p className="text-xs text-stone-500 mt-1 flex items-center gap-1">
               <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-              <span>Authentic Stone: <strong>{product.marble_type}</strong></span>
+              <span>Authentic Stone: <strong>{product.marble_type || 'Makrana White Marble'}</strong></span>
             </p>
           </div>
 
@@ -158,9 +205,9 @@ export default function ProductDetail() {
           <div className="bg-stone-50 p-4 rounded-xl border border-stone-200">
             <div className="flex items-baseline gap-3">
               <span className="text-3xl font-bold font-mono text-stone-900">
-                ₹{Number(product.price).toLocaleString('en-IN')}
+                ₹{Number(product.price || 0).toLocaleString('en-IN')}
               </span>
-              {product.original_price && product.original_price > product.price && (
+              {product.original_price && Number(product.original_price) > Number(product.price) && (
                 <span className="text-sm text-stone-400 line-through font-mono">
                   ₹{Number(product.original_price).toLocaleString('en-IN')}
                 </span>
