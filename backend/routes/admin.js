@@ -97,12 +97,19 @@ router.put('/orders/:id/status', (req, res) => {
     const orderId = req.params.id;
     const {
       order_status,
+      status,
       courier_name,
+      carrier_name,
       tracking_number,
       current_location,
       estimated_delivery,
-      notes
+      notes,
+      note
     } = req.body;
+
+    const finalStatus = order_status || status;
+    const finalCourier = courier_name || carrier_name;
+    const finalNotes = notes || note;
 
     const existingOrder = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
     if (!existingOrder) {
@@ -120,19 +127,19 @@ router.put('/orders/:id/status', (req, res) => {
         notes = COALESCE(?, notes)
       WHERE id = ?
     `).run(
-      order_status || null,
-      courier_name || null,
+      finalStatus || null,
+      finalCourier || null,
       tracking_number || null,
       current_location || null,
       estimated_delivery || null,
-      notes || null,
+      finalNotes || null,
       orderId
     );
 
     // Add entry to tracking_history
-    const newStatus = order_status || existingOrder.order_status;
+    const newStatus = finalStatus || existingOrder.order_status;
     const newLocation = current_location || existingOrder.current_location || 'Makrana Warehouse';
-    const trackingNote = notes || `Status updated to ${newStatus}`;
+    const trackingNote = finalNotes || `Status updated to ${newStatus}`;
 
     db.prepare(`
       INSERT INTO tracking_history (order_id, status, location, notes)

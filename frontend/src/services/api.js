@@ -80,63 +80,124 @@ function saveLocalProducts(products) {
 
 function getLocalOrders() {
   const cached = localStorage.getItem('kd_orders');
+  let ordersList = [];
   if (cached) {
     try {
-      return JSON.parse(cached);
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        ordersList = parsed;
+      }
     } catch (e) {}
   }
-  const initial = [
-    {
-      id: 101,
-      order_number: 'KD-2026-8812',
-      tracking_number: 'KD-EXP-992104',
-      user_id: 2,
-      user_name: 'Rajesh Sharma',
-      user_email: 'customer@gmail.com',
-      user_phone: '+91 98765 43210',
-      shipping_address: 'Flat 402, Royal Palms Residency, MG Road, Mumbai, Maharashtra - 400001',
-      items: [
-        {
-          id: 18,
-          title: 'crossing diamond shrines',
-          category: 'Marble Mandir',
-          price: 3500,
-          quantity: 1,
-          image_url: resolveImageUrl('/uploads/marble_file_00000000b96081f48de404bf886fb56a_1792778687368.png')
-        }
-      ],
-      total_amount: 3500,
-      payment_method: 'UPI / Online Payment',
-      payment_status: 'Paid',
-      status: 'In Transit',
-      tracking_status: 'On The Way (Wooden Crate Dispatched)',
-      current_location: 'Jaipur Transport Hub -> En Route to Mumbai sanctum',
-      carrier_name: 'Safexpress White Marble Logistics',
-      tracking_history: [
-        {
-          status: 'Order Confirmed',
-          location: 'Makrana Workshop Sanctum',
-          timestamp: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-          note: 'Pure Makrana white marble craftsmanship inspected and certified.'
-        },
-        {
-          status: 'Reinforced Crated',
-          location: 'Makrana Logistics Hub',
-          timestamp: new Date(Date.now() - 12 * 3600 * 1000).toISOString(),
-          note: 'Packed inside double shock-absorbent timber crate.'
-        },
-        {
-          status: 'In Transit',
-          location: 'Jaipur Central Freight Division',
-          timestamp: new Date().toISOString(),
-          note: 'Consignment cleared and moving via dedicated express freight.'
-        }
-      ],
-      created_at: new Date(Date.now() - 24 * 3600 * 1000).toISOString()
-    }
-  ];
-  localStorage.setItem('kd_orders', JSON.stringify(initial));
-  return initial;
+  if (ordersList.length === 0) {
+    ordersList = [
+      {
+        id: 101,
+        order_number: 'KD-2026-8812',
+        tracking_number: 'KD-EXP-992104',
+        user_id: 2,
+        user_name: 'Rajesh Sharma',
+        customer_name: 'Rajesh Sharma',
+        user_email: 'customer@gmail.com',
+        customer_email: 'customer@gmail.com',
+        user_phone: '+91 98765 43210',
+        customer_phone: '+91 98765 43210',
+        shipping_address: 'Flat 402, Royal Palms Residency, MG Road, Mumbai, Maharashtra - 400001',
+        city: 'Mumbai',
+        state: 'Maharashtra',
+        pincode: '400001',
+        items: [
+          {
+            id: 18,
+            title: 'crossing diamond shrines',
+            category: 'Marble Mandir',
+            price: 3500,
+            quantity: 1,
+            image_url: resolveImageUrl('/uploads/marble_file_00000000b96081f48de404bf886fb56a_1792778687368.png'),
+            marble_type: 'Pure Makrana White Marble'
+          }
+        ],
+        total_amount: 3500,
+        payment_method: 'UPI / Online Payment',
+        payment_status: 'Paid',
+        status: 'In Transit',
+        order_status: 'In Transit',
+        tracking_status: 'In Transit (Wooden Crate Dispatched)',
+        current_location: 'Jaipur Transport Hub -> En Route to Mumbai sanctum',
+        carrier_name: 'SafeXpress Heavy Freight Logistics',
+        courier_name: 'SafeXpress Heavy Freight Logistics',
+        estimated_delivery: '28 Oct 2026',
+        notes: 'Consignment loaded into shock-absorbing wooden crate and handed to driver.',
+        tracking_history: [
+          {
+            status: 'Order Placed',
+            location: 'Makrana Workshop Sanctum',
+            timestamp: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+            note: 'Pure Makrana white marble craftsmanship inspected and certified.',
+            notes: 'Pure Makrana white marble craftsmanship inspected and certified.'
+          },
+          {
+            status: 'Dispatched',
+            location: 'Makrana Logistics Hub',
+            timestamp: new Date(Date.now() - 12 * 3600 * 1000).toISOString(),
+            note: 'Packed inside double shock-absorbent timber crate.',
+            notes: 'Packed inside double shock-absorbent timber crate.'
+          },
+          {
+            status: 'In Transit',
+            location: 'Jaipur Central Freight Division',
+            timestamp: new Date().toISOString(),
+            note: 'Consignment cleared and moving via dedicated express freight.',
+            notes: 'Consignment cleared and moving via dedicated express freight.'
+          }
+        ],
+        created_at: new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+      }
+    ];
+    localStorage.setItem('kd_orders', JSON.stringify(ordersList));
+  }
+
+  // Normalize all orders so both status/order_status and customer_name/user_name exist
+  return ordersList.map(o => {
+    const st = o.order_status || o.status || 'Order Placed';
+    const cName = o.customer_name || o.user_name || 'Customer';
+    const cEmail = o.customer_email || o.user_email || 'customer@gmail.com';
+    const cPhone = o.customer_phone || o.user_phone || '+91 98765 43210';
+    const courier = o.courier_name || o.carrier_name || 'SafeXpress Heavy Freight Logistics';
+    const trk = o.tracking_number || ('KD-EXP-' + Math.floor(100000 + Math.random() * 900000));
+    const loc = o.current_location || 'Makrana Workshop Hub';
+    const est = o.estimated_delivery || '5-7 Days';
+    const nts = o.notes || o.note || `Status: ${st}`;
+
+    const items = (o.items || []).map(item => ({
+      ...item,
+      image_url: resolveImageUrl(item.image_url)
+    }));
+
+    return {
+      ...o,
+      status: st,
+      order_status: st,
+      tracking_status: o.tracking_status || st,
+      customer_name: cName,
+      user_name: cName,
+      customer_email: cEmail,
+      user_email: cEmail,
+      customer_phone: cPhone,
+      user_phone: cPhone,
+      shipping_address: o.shipping_address || 'Makrana Sanctum Delivery Destination',
+      city: o.city || 'Mumbai',
+      state: o.state || 'Maharashtra',
+      pincode: o.pincode || '400001',
+      courier_name: courier,
+      carrier_name: courier,
+      tracking_number: trk,
+      current_location: loc,
+      estimated_delivery: est,
+      notes: nts,
+      items
+    };
+  });
 }
 
 function saveLocalOrders(orders) {
@@ -495,21 +556,38 @@ export const api = {
     } catch (err) {}
 
     const orders = getLocalOrders();
+    const orderNum = 'KD-' + Math.floor(1000 + Math.random() * 9000);
+    const trackingNum = 'KD-EXP-' + Math.floor(100000 + Math.random() * 900000);
+    const cName = orderData.customer_name || orderData.user_name || 'Customer';
+    const cEmail = orderData.customer_email || orderData.user_email || 'customer@gmail.com';
+    const cPhone = orderData.customer_phone || orderData.user_phone || '+91 98765 43210';
+
     const newOrder = {
       id: Date.now(),
-      order_number: 'KD-' + Math.floor(1000 + Math.random() * 9000),
-      tracking_number: 'KD-EXP-' + Math.floor(100000 + Math.random() * 900000),
+      order_number: orderNum,
+      tracking_number: trackingNum,
       ...orderData,
-      status: 'Confirmed',
+      customer_name: cName,
+      user_name: cName,
+      customer_email: cEmail,
+      user_email: cEmail,
+      customer_phone: cPhone,
+      user_phone: cPhone,
+      status: 'Order Placed',
+      order_status: 'Order Placed',
       tracking_status: 'Order Placed (Makrana Artisan Sanctified)',
       current_location: 'Makrana Sacred Workshop Hub',
-      carrier_name: 'Safexpress White Marble Logistics',
+      carrier_name: 'SafeXpress Heavy Freight Logistics',
+      courier_name: 'SafeXpress Heavy Freight Logistics',
+      estimated_delivery: '5-7 Days',
+      notes: 'Your sacred marble order has been confirmed and registered for freight transit.',
       tracking_history: [
         {
-          status: 'Order Confirmed',
+          status: 'Order Placed',
           location: 'Makrana Sanctum',
           timestamp: new Date().toISOString(),
-          note: 'Your divine marble order has been confirmed and registered for freight transit.'
+          note: 'Your divine marble order has been confirmed and registered for freight transit.',
+          notes: 'Your divine marble order has been confirmed and registered for freight transit.'
         }
       ],
       created_at: new Date().toISOString()
@@ -529,7 +607,10 @@ export const api = {
 
     const user = JSON.parse(localStorage.getItem('royal_marble_user') || '{}');
     const orders = getLocalOrders();
-    const myOrders = orders.filter(o => o.user_id === user.id || o.user_email === user.email);
+    const myOrders = orders.filter(o =>
+      (user.id && (String(o.user_id) === String(user.id) || String(o.userId) === String(user.id))) ||
+      (user.email && (o.user_email === user.email || o.customer_email === user.email))
+    );
     return { success: true, orders: myOrders.length > 0 ? myOrders : orders };
   },
 
@@ -554,10 +635,10 @@ export const api = {
     } catch (err) {}
 
     const orders = getLocalOrders();
-    const query = String(orderOrTrackingNumber).trim().toUpperCase();
+    const query = String(orderOrTrackingNumber || '').trim().toUpperCase();
     const order = orders.find(o =>
-      String(o.tracking_number).toUpperCase() === query ||
-      String(o.order_number).toUpperCase() === query ||
+      String(o.tracking_number || '').toUpperCase() === query ||
+      String(o.order_number || '').toUpperCase() === query ||
       String(o.id) === query
     );
 
@@ -579,13 +660,18 @@ export const api = {
     const products = getLocalProducts();
     const orders = getLocalOrders();
     const totalSales = orders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+    const deliveredCount = orders.filter(o => (o.order_status === 'Delivered' || o.status === 'Delivered')).length;
+    const pendingCount = orders.length - deliveredCount;
 
     return {
       success: true,
       stats: {
         totalProducts: products.length,
         totalOrders: orders.length,
+        totalRevenue: totalSales,
         totalSales,
+        pendingOrders: pendingCount,
+        deliveredOrders: deliveredCount,
         totalCustomers: 5
       },
       recentOrders: orders.slice(0, 5)
@@ -594,7 +680,13 @@ export const api = {
 
   getAdminOrders: async (params = {}) => {
     try {
-      const query = new URLSearchParams(params);
+      const query = new URLSearchParams();
+      if (params.status && params.status !== 'All') {
+        query.append('status', params.status);
+      }
+      if (params.search) {
+        query.append('search', params.search);
+      }
       const res = await fetch(`${API_BASE}/admin/orders?${query.toString()}`, {
         headers: getAuthHeaders()
       });
@@ -602,8 +694,22 @@ export const api = {
     } catch (err) {}
 
     let orders = getLocalOrders();
-    if (params.status) {
-      orders = orders.filter(o => o.status === params.status);
+    if (params.status && params.status !== 'All') {
+      const st = params.status.toLowerCase();
+      orders = orders.filter(o =>
+        (o.order_status && o.order_status.toLowerCase() === st) ||
+        (o.status && o.status.toLowerCase() === st)
+      );
+    }
+    if (params.search && params.search.trim()) {
+      const q = params.search.trim().toLowerCase();
+      orders = orders.filter(o =>
+        (o.order_number && o.order_number.toLowerCase().includes(q)) ||
+        (o.customer_name && o.customer_name.toLowerCase().includes(q)) ||
+        (o.user_name && o.user_name.toLowerCase().includes(q)) ||
+        (o.customer_phone && o.customer_phone.includes(q)) ||
+        (o.tracking_number && o.tracking_number.toLowerCase().includes(q))
+      );
     }
     return { success: true, orders };
   },
@@ -619,28 +725,42 @@ export const api = {
     } catch (err) {}
 
     const orders = getLocalOrders();
-    const idx = orders.findIndex(o => String(o.id) === String(orderId));
+    const idx = orders.findIndex(o => String(o.id) === String(orderId) || String(o.order_number) === String(orderId));
     if (idx !== -1) {
       const order = orders[idx];
-      const newStatus = updateData.status || order.status;
-      const history = order.tracking_history || [];
+      const newStatus = updateData.order_status || updateData.status || order.order_status || order.status || 'In Transit';
+      const newCarrier = updateData.courier_name || updateData.carrier_name || order.courier_name || order.carrier_name || 'SafeXpress Heavy Freight Logistics';
+      const newTrackingNumber = updateData.tracking_number || order.tracking_number || ('KD-EXP-' + Math.floor(100000 + Math.random() * 900000));
+      const newLocation = updateData.current_location || order.current_location || 'Makrana Workshop Hub';
+      const newDelivery = updateData.estimated_delivery || order.estimated_delivery || '5-7 Days';
+      const newNote = updateData.notes || updateData.note || `Consignment status updated to ${newStatus}`;
+
+      const history = Array.isArray(order.tracking_history) ? [...order.tracking_history] : [];
       history.push({
         status: newStatus,
-        location: updateData.current_location || 'Makrana Freight Facility',
+        location: newLocation,
         timestamp: new Date().toISOString(),
-        note: updateData.note || 'Milestone update from Krushna Devghar owner admin.'
+        note: newNote,
+        notes: newNote
       });
 
-      orders[idx] = {
+      const updated = {
         ...order,
         status: newStatus,
-        tracking_status: updateData.tracking_status || newStatus,
-        current_location: updateData.current_location || order.current_location,
-        carrier_name: updateData.carrier_name || order.carrier_name,
+        order_status: newStatus,
+        tracking_status: newStatus,
+        carrier_name: newCarrier,
+        courier_name: newCarrier,
+        tracking_number: newTrackingNumber,
+        current_location: newLocation,
+        estimated_delivery: newDelivery,
+        notes: newNote,
         tracking_history: history
       };
+
+      orders[idx] = updated;
       saveLocalOrders(orders);
-      return { success: true, order: orders[idx] };
+      return { success: true, message: `Order #${order.order_number} status updated to "${newStatus}"!`, order: updated };
     }
     return { success: false, message: 'Order not found' };
   },

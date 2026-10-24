@@ -54,9 +54,18 @@ export default function TrackOrder() {
       setOrderQuery(initialQuery);
       handleSearch(initialQuery);
     } else {
-      // Default to the sample order so the user sees live tracking right away!
-      setOrderQuery('MRB-2026-8942');
-      handleSearch('MRB-2026-8942');
+      // Default to the customer's actual latest order or the initial sample order
+      try {
+        const localOrders = JSON.parse(localStorage.getItem('kd_orders') || '[]');
+        if (Array.isArray(localOrders) && localOrders.length > 0) {
+          const target = localOrders[0].order_number || localOrders[0].tracking_number || 'KD-2026-8812';
+          setOrderQuery(target);
+          handleSearch(target);
+          return;
+        }
+      } catch (e) {}
+      setOrderQuery('KD-2026-8812');
+      handleSearch('KD-2026-8812');
     }
   }, [initialQuery]);
 

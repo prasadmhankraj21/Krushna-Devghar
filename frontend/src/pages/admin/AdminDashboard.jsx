@@ -216,7 +216,7 @@ export default function AdminDashboard() {
                   <td className="py-3.5 px-4 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <Link
-                        to="/admin/orders"
+                        to={`/admin/orders?search=${encodeURIComponent(order.order_number)}`}
                         className="px-2.5 py-1 bg-stone-900 hover:bg-stone-800 text-white text-[11px] font-semibold rounded shadow-sm"
                       >
                         Update Tracking

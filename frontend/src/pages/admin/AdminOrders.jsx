@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../../services/api';
 import InvoiceModal from '../../components/InvoiceModal';
 import {
@@ -19,10 +20,12 @@ import {
 } from 'lucide-react';
 
 export default function AdminOrders() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const querySearch = searchParams.get('search') || searchParams.get('order') || '';
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('All');
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(querySearch);
   const [selectedInvoiceOrder, setSelectedInvoiceOrder] = useState(null);
   const [trackingModalOrder, setTrackingModalOrder] = useState(null);
   const [trackingFormData, setTrackingFormData] = useState({
@@ -50,7 +53,7 @@ export default function AdminOrders() {
     try {
       const res = await api.getAdminOrders({ status: statusFilter, search });
       if (res.success) {
-        setOrders(res.orders);
+        setOrders(res.orders || []);
       }
     } catch (err) {
       console.error('Failed to load orders:', err);
@@ -66,12 +69,12 @@ export default function AdminOrders() {
   const handleOpenTrackingModal = (order) => {
     setTrackingModalOrder(order);
     setTrackingFormData({
-      order_status: order.order_status || 'In Transit',
-      courier_name: order.courier_name || 'SafeXpress Heavy Freight Logistics',
-      tracking_number: order.tracking_number || `SX-TRK-${Math.floor(100000 + Math.random() * 900000)}`,
-      current_location: order.current_location || 'Makrana Workshop',
+      order_status: order.order_status || order.status || 'In Transit',
+      courier_name: order.courier_name || order.carrier_name || 'SafeXpress Heavy Freight Logistics',
+      tracking_number: order.tracking_number || `KD-EXP-${Math.floor(100000 + Math.random() * 900000)}`,
+      current_location: order.current_location || 'Makrana Sacred Workshop Hub',
       estimated_delivery: order.estimated_delivery || '5-7 Days',
-      notes: `Status updated to ${order.order_status || 'In Transit'}`
+      notes: order.notes || `Status updated to ${order.order_status || order.status || 'In Transit'}`
     });
   };
 
@@ -82,10 +85,12 @@ export default function AdminOrders() {
     try {
       const res = await api.updateOrderStatus(trackingModalOrder.id, trackingFormData);
       if (res.success) {
-        setStatusNotice(`Order #${trackingModalOrder.order_number} live status updated!`);
+        setStatusNotice(`Order #${trackingModalOrder.order_number} live status updated successfully!`);
         setTrackingModalOrder(null);
-        loadOrders();
-        setTimeout(() => setStatusNotice(''), 3000);
+        await loadOrders();
+        setTimeout(() => setStatusNotice(''), 3500);
+      } else {
+        alert(res.message || 'Error updating order status');
       }
     } catch (err) {
       console.error('Error updating status:', err);
@@ -179,7 +184,25 @@ export default function AdminOrders() {
           <div className="bg-white p-12 text-center rounded-2xl border border-stone-200">
             <ShoppingBag className="w-12 h-12 text-stone-300 mx-auto mb-3" />
             <h3 className="text-base font-bold text-stone-800">No Orders Found</h3>
-            <p className="text-xs text-stone-500 mt-1">There are no orders matching this filter.</p>
+            <p className="text-xs text-stone-500 mt-1">
+              {search
+                ? `No orders matching "${search}".`
+                : statusFilter !== 'All'
+                ? `No orders with status "${statusFilter}".`
+                : 'There are currently no customer orders placed.'}
+            </p>
+            {(search || statusFilter !== 'All') && (
+              <button
+                onClick={() => {
+                  setSearch('');
+                  setStatusFilter('All');
+                  setSearchParams({});
+                }}
+                className="mt-3 inline-block gold-btn px-4 py-2 rounded-xl text-xs font-bold shadow cursor-pointer"
+              >
+                Show All Orders
+              </button>
+            )}
           </div>
         ) : (
           orders.map((order) => (
