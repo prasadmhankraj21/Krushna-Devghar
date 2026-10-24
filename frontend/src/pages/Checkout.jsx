@@ -84,19 +84,30 @@ export default function Checkout() {
     try {
       setIsPaymentModalOpen(false);
 
+      const itemsPayload = cartItems.map(item => ({
+        id: item.id,
+        product_id: item.id,
+        title: item.title,
+        price: Number(item.price) || 0,
+        quantity: Number(item.quantity) || 1,
+        image_url: item.image_url,
+        marble_type: item.marble_type || 'Makrana Natural White Marble',
+        category: item.category || 'Marble Mandir'
+      }));
+
+      const calculatedSubtotal = itemsPayload.reduce((sum, it) => sum + (it.price * it.quantity), 0);
+      const calculatedGst = Math.round(calculatedSubtotal * 0.12);
+      const calculatedTotal = calculatedSubtotal + calculatedGst;
+
       const orderPayload = {
         ...formData,
-        payment_method,
-        transaction_id,
-        items: cartItems.map(item => ({
-          id: item.id,
-          product_id: item.id,
-          title: item.title,
-          price: item.price,
-          quantity: item.quantity,
-          image_url: item.image_url,
-          marble_type: item.marble_type
-        }))
+        payment_method: payment_method || 'UPI / Online Payment',
+        transaction_id: transaction_id || `TXN_${Date.now().toString(36).toUpperCase()}`,
+        items: itemsPayload,
+        subtotal: calculatedSubtotal,
+        gst_amount: calculatedGst,
+        shipping_charges: 0,
+        total_amount: calculatedTotal
       };
 
       const res = await api.createOrder(orderPayload);

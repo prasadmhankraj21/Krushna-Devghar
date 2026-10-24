@@ -171,8 +171,24 @@ function getLocalOrders() {
 
     const items = (o.items || []).map(item => ({
       ...item,
+      price: Number(item.price) || 0,
+      quantity: Number(item.quantity) || 1,
       image_url: resolveImageUrl(item.image_url)
     }));
+
+    let itemsSum = items.reduce((sum, it) => sum + (it.price * it.quantity), 0);
+    let subtotal = Number(o.subtotal);
+    if (isNaN(subtotal) || subtotal <= 0) {
+      subtotal = itemsSum > 0 ? itemsSum : 3500;
+    }
+    let gst = Number(o.gst_amount);
+    if (isNaN(gst) || gst < 0) {
+      gst = Math.round(subtotal * 0.12);
+    }
+    let total = Number(o.total_amount);
+    if (isNaN(total) || total <= 0) {
+      total = subtotal + gst;
+    }
 
     return {
       ...o,
@@ -195,7 +211,10 @@ function getLocalOrders() {
       current_location: loc,
       estimated_delivery: est,
       notes: nts,
-      items
+      items,
+      subtotal,
+      gst_amount: gst,
+      total_amount: total
     };
   });
 }
@@ -562,6 +581,26 @@ export const api = {
     const cEmail = orderData.customer_email || orderData.user_email || 'customer@gmail.com';
     const cPhone = orderData.customer_phone || orderData.user_phone || '+91 98765 43210';
 
+    const items = (orderData.items || []).map(item => ({
+      ...item,
+      price: Number(item.price) || 0,
+      quantity: Number(item.quantity) || 1,
+      image_url: resolveImageUrl(item.image_url)
+    }));
+
+    let subtotal = Number(orderData.subtotal);
+    if (isNaN(subtotal) || subtotal <= 0) {
+      subtotal = items.reduce((sum, it) => sum + (it.price * it.quantity), 0);
+    }
+    let gstAmount = Number(orderData.gst_amount);
+    if (isNaN(gstAmount) || gstAmount < 0) {
+      gstAmount = Math.round(subtotal * 0.12);
+    }
+    let totalAmount = Number(orderData.total_amount);
+    if (isNaN(totalAmount) || totalAmount <= 0) {
+      totalAmount = subtotal + gstAmount;
+    }
+
     const newOrder = {
       id: Date.now(),
       order_number: orderNum,
@@ -573,6 +612,13 @@ export const api = {
       user_email: cEmail,
       customer_phone: cPhone,
       user_phone: cPhone,
+      items,
+      subtotal,
+      gst_amount: gstAmount,
+      shipping_charges: 0,
+      total_amount: totalAmount,
+      payment_method: orderData.payment_method || 'UPI / Online Payment',
+      payment_status: 'Paid',
       status: 'Order Placed',
       order_status: 'Order Placed',
       tracking_status: 'Order Placed (Makrana Artisan Sanctified)',

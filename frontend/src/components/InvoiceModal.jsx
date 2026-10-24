@@ -20,8 +20,30 @@ export default function InvoiceModal({ order, isOpen, onClose }) {
         year: 'numeric'
       });
 
-  const subtotal = order.subtotal || Math.round(order.total_amount / 1.12);
-  const gstAmount = order.gst_amount || Math.round(subtotal * 0.12);
+  // Calculate item sum and totals safely so NaN is completely prevented
+  const itemsList = Array.isArray(order.items) ? order.items : [];
+  let calculatedItemsSum = 0;
+  itemsList.forEach(item => {
+    const p = Number(item.price) || 0;
+    const q = Number(item.quantity) || 1;
+    calculatedItemsSum += p * q;
+  });
+
+  const rawTotal = Number(order.total_amount);
+  const totalAmount = !isNaN(rawTotal) && rawTotal > 0
+    ? rawTotal
+    : (calculatedItemsSum > 0 ? Math.round(calculatedItemsSum * 1.12) : 3500);
+
+  const rawSubtotal = Number(order.subtotal);
+  const subtotal = !isNaN(rawSubtotal) && rawSubtotal > 0
+    ? rawSubtotal
+    : (calculatedItemsSum > 0 ? calculatedItemsSum : Math.round(totalAmount / 1.12));
+
+  const rawGst = Number(order.gst_amount);
+  const gstAmount = !isNaN(rawGst) && rawGst >= 0
+    ? rawGst
+    : Math.max(0, totalAmount - subtotal);
+
   const cgst = Math.round(gstAmount / 2);
   const sgst = Math.round(gstAmount / 2);
 
@@ -154,10 +176,10 @@ export default function InvoiceModal({ order, isOpen, onClose }) {
                       <td className="py-3 px-3 text-center font-mono text-stone-600">6802</td>
                       <td className="py-3 px-3 text-center font-bold text-stone-900">{item.quantity}</td>
                       <td className="py-3 px-3 text-right font-mono">
-                        ₹{Number(item.price).toLocaleString('en-IN')}
+                        ₹{Number(item.price || 0).toLocaleString('en-IN')}
                       </td>
                       <td className="py-3 px-3 text-right font-bold font-mono text-stone-900">
-                        ₹{(Number(item.price) * Number(item.quantity)).toLocaleString('en-IN')}
+                        ₹{(Number(item.price || 0) * Number(item.quantity || 1)).toLocaleString('en-IN')}
                       </td>
                     </tr>
                   ))
@@ -188,15 +210,15 @@ export default function InvoiceModal({ order, isOpen, onClose }) {
             <div className="w-full sm:w-72 space-y-1.5 text-xs">
               <div className="flex justify-between py-1 border-b border-stone-100 text-stone-600">
                 <span>Taxable Amount (Subtotal):</span>
-                <span className="font-mono font-medium">₹{subtotal.toLocaleString('en-IN')}</span>
+                <span className="font-mono font-medium">₹{Number(subtotal || 0).toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-stone-100 text-stone-600">
                 <span>CGST (6%):</span>
-                <span className="font-mono font-medium">₹{cgst.toLocaleString('en-IN')}</span>
+                <span className="font-mono font-medium">₹{Number(cgst || 0).toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-stone-100 text-stone-600">
                 <span>SGST (6%):</span>
-                <span className="font-mono font-medium">₹{sgst.toLocaleString('en-IN')}</span>
+                <span className="font-mono font-medium">₹{Number(sgst || 0).toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-stone-100 text-stone-600">
                 <span>Insured Freight & Packaging:</span>
@@ -205,7 +227,7 @@ export default function InvoiceModal({ order, isOpen, onClose }) {
               <div className="flex justify-between py-2 border-t-2 border-stone-900 font-bold text-sm text-stone-900">
                 <span>Total Amount (Paid):</span>
                 <span className="text-base text-amber-900 font-mono">
-                  ₹{Number(order.total_amount).toLocaleString('en-IN')}
+                  ₹{Number(totalAmount || 0).toLocaleString('en-IN')}
                 </span>
               </div>
             </div>

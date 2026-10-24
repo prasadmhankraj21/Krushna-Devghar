@@ -83,7 +83,7 @@ export default function OrderSuccess() {
             </div>
             <div className="flex justify-between py-1 border-b border-stone-100">
               <span className="text-stone-500">Amount Paid:</span>
-              <span className="font-mono font-bold text-stone-900">₹{Number(order.total_amount).toLocaleString('en-IN')}</span>
+              <span className="font-mono font-bold text-stone-900">₹{Number(order.total_amount || 0).toLocaleString('en-IN')}</span>
             </div>
             <div className="flex justify-between py-1 border-b border-stone-100">
               <span className="text-stone-500">Payment Mode:</span>

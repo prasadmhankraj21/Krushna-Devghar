@@ -146,7 +146,7 @@ export default function MyOrders() {
                       <span>{order.order_status}</span>
                     </span>
                     <span className="font-mono font-bold text-sm text-stone-900 bg-white px-2.5 py-1 rounded-lg border border-stone-200">
-                      ₹{Number(order.total_amount).toLocaleString('en-IN')}
+                      ₹{Number(order.total_amount || 0).toLocaleString('en-IN')}
                     </span>
                   </div>
                 </div>
@@ -206,7 +206,7 @@ export default function MyOrders() {
                             </p>
                           </div>
                           <div className="font-mono text-xs font-bold text-stone-900">
-                            ₹{(Number(item.price) * Number(item.quantity)).toLocaleString('en-IN')}
+                            ₹{(Number(item.price || 0) * Number(item.quantity || 1)).toLocaleString('en-IN')}
                           </div>
                         </div>
                       ))}

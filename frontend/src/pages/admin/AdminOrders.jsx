@@ -258,7 +258,7 @@ export default function AdminOrders() {
                   <h4 className="font-bold text-stone-900 uppercase tracking-wider text-[11px] border-b border-stone-100 pb-1 flex items-center justify-between">
                     <span>Products Purchased ({order.items?.length || 0})</span>
                     <span className="font-mono text-stone-900 font-bold text-sm">
-                      Total: ₹{Number(order.total_amount).toLocaleString('en-IN')}
+                      Total: ₹{Number(order.total_amount || 0).toLocaleString('en-IN')}
                     </span>
                   </h4>
 
@@ -277,7 +277,7 @@ export default function AdminOrders() {
                           </p>
                         </div>
                         <div className="text-right font-mono text-xs font-bold text-stone-900">
-                          ₹{(Number(item.price) * Number(item.quantity)).toLocaleString('en-IN')}
+                          ₹{(Number(item.price || 0) * Number(item.quantity || 1)).toLocaleString('en-IN')}
                         </div>
                       </div>
                     ))}
